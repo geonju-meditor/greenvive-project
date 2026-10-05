@@ -32,12 +32,12 @@
   }
   * { box-sizing: border-box; }
   html { font-size: 17px; }
-  body { margin: 0; color: var(--ink); background: var(--bg2) linear-gradient(180deg, var(--bg1) 0, var(--bg2) 1400px) no-repeat;
+  body { margin: 0; color: var(--ink); background: #030f22; position: relative; overflow-x: hidden;
     font-family: "Noto Sans KR", system-ui, -apple-system, sans-serif; font-weight: 500; line-height: 1.65; letter-spacing: -.01em; word-break: keep-all; overflow-wrap: anywhere; }
   h1, h2, .light, .says, .where, .btn-font { font-family: "Jua", "Noto Sans KR", system-ui, sans-serif; font-weight: 400; letter-spacing: 0; }
 
   /* ----- 하늘 + 바다 + 낚시하는 사람 ----- */
-  .hero { position: relative; height: clamp(210px, 24vw, 290px); overflow: hidden; }
+  .hero { position: relative; z-index: 1; height: var(--hero-h); overflow: hidden; }
   .scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .hero-text { position: absolute; top: 12px; left: max(16px, calc((100% - 1180px) / 2 + 16px)); right: 16px; pointer-events: none; }
   .hero h1 { font-size: clamp(2.2rem, 6vw, 3.2rem); line-height: 1.1; margin: 0; color: var(--title);
@@ -58,7 +58,7 @@
   @keyframes float { to { transform: translateX(26px); } }
   @media (prefers-reduced-motion: reduce) { .waves, .bob, .jump, .cloud { animation: none; } .jump { opacity: 1; transform: translateY(0); } }
 
-  main { max-width: 1180px; margin: 0 auto; padding: 4px 16px 10px; }
+  main { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 4px 16px 10px; }
   .layout { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
   @media (max-width: 700px) { .tag { display: none; } .light { font-size: 1.6rem; } .mood { font-size: 3rem; } }
   @media (min-width: 900px) {
@@ -130,9 +130,36 @@
 
   footer { color: #fff; font-size: .85rem; text-align: center; padding: 14px 16px 28px; text-shadow: 0 1px 3px rgba(0,0,0,.5); line-height: 1.7; }
   [hidden] { display: none !important; }
+
+  /* ----- 깊어지는 바다 ----- */
+  :root { --hero-h: clamp(210px, 24vw, 290px);
+    --dp1: #2b86cb; --dp2: #17598f; --dp3: #0b3560; --dp4: #051c38; --dp5: #030f22; }
+  @media (prefers-color-scheme: dark) { :root { --dp1: #0c2b4d; --dp2: #081f3a; --dp3: #051730; --dp4: #030e20; --dp5: #01070f; } }
+  .abyss { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+    background: linear-gradient(180deg, var(--bg1) 0, var(--bg1) var(--hero-h), var(--dp1) 18%, var(--dp2) 42%, var(--dp3) 66%, var(--dp4) 86%, var(--dp5) 100%); }
+  .rays { position: absolute; left: 0; right: 0; top: var(--hero-h); height: 75vh; opacity: .55;
+    background: repeating-linear-gradient(104deg, rgba(255,255,255,0) 0 70px, rgba(255,255,255,.16) 70px 120px, rgba(255,255,255,0) 120px 230px);
+    -webkit-mask-image: linear-gradient(180deg, #000, transparent); mask-image: linear-gradient(180deg, #000, transparent);
+    animation: sway 16s ease-in-out infinite alternate; }
+  @keyframes sway { to { background-position: 120px 0; } }
+  .cr { position: absolute; line-height: 1; opacity: .92; animation: swim var(--dur, 12s) ease-in-out infinite alternate; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); }
+  @keyframes swim { from { transform: translate(-22px, 0) rotate(-3deg); } to { transform: translate(26px, -12px) rotate(3deg); } }
+  .cr.glow { filter: drop-shadow(0 0 10px #8fe8ff); }
+  .cr.glowy { filter: drop-shadow(0 0 12px #ffe55c); }
+  .dot-p { position: absolute; border-radius: 50%; background: #aef; box-shadow: 0 0 8px 2px rgba(150,230,255,.7); animation: twinkle var(--dur, 4s) ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity: .15; } to { opacity: .95; } }
+  .bubbles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bubbles span { position: absolute; bottom: -24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); animation: rise linear infinite; }
+  @keyframes rise { to { transform: translateY(-110vh) translateX(var(--dx, 20px)); opacity: 0; } }
+  .deepzone { text-align: center; padding: 44px 8px 26vh; color: rgba(255,255,255,.88); font-family: "Jua", "Noto Sans KR", sans-serif; font-size: 1.3rem; line-height: 1.6; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .deepzone p { margin: 0 0 22vh; }
+  .deepzone small { display: block; font-size: .85rem; opacity: .75; font-family: "Noto Sans KR", sans-serif; }
+  @media (prefers-reduced-motion: reduce) { .cr, .dot-p, .rays, .bubbles span { animation: none; } .bubbles { display: none; } }
 </style>
 </head>
 <body>
+<div class="abyss" aria-hidden="true"><div class="rays"></div><div id="creatures"></div></div>
+<div class="bubbles" id="bubbles" aria-hidden="true"></div>
 <header class="hero">
   <svg class="scene" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
     <defs>
@@ -243,6 +270,11 @@
       </div>
     </section>
   </div>
+
+  <section class="deepzone" aria-hidden="true">
+    <p>▼ 수심 200m<small>햇빛이 점점 사라져요 🌒</small></p>
+    <p>▼ 수심 1,000m<small>캄캄한 심해에서는 스스로 빛나는 친구들이 살아요 ✨</small></p>
+  </section>
 
   <footer>
     데이터: Open-Meteo Marine API (모델 예측값, 참고용) · 지도: Natural Earth<br>
@@ -605,6 +637,65 @@ function showStatus(text, isErr) {
   e.textContent = text;
   e.className = "msg" + (isErr ? " err" : "");
 }
+
+// ---------- 깊어지는 바다 장식 (물고기 · 해파리 · 아귀 · 거품) ----------
+const SVG_ANGLER = '<svg viewBox="0 0 130 90" width="130" aria-hidden="true"><defs><radialGradient id="lureg"><stop offset="0" stop-color="#fff7b0"/><stop offset=".4" stop-color="#ffe55c" stop-opacity=".9"/><stop offset="1" stop-color="#ffe55c" stop-opacity="0"/></radialGradient></defs><path d="M60 24Q72-4 108 10" stroke="#34457a" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="108" cy="12" r="17" fill="url(#lureg)"/><circle cx="108" cy="12" r="4" fill="#fff7b0"/><path d="M12 50L0 38L3 62Z" fill="#27396b"/><path d="M10 50q10-34 55-30q38 4 40 32q-2 26-40 28q-44 2-55-30z" fill="#27396b"/><path d="M70 54q22 6 36-6l2 10q-20 16-38 8z" fill="#101a38"/><path d="M76 56l3 6l3-5l3 6l3-6l3 5l3-5" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="64" cy="40" r="9" fill="#fff"/><circle cx="66" cy="40" r="4.5" fill="#111"/></svg>';
+const SVG_JELLY = '<svg viewBox="0 0 60 90" width="56" aria-hidden="true"><path d="M5 40a25 30 0 0 1 50 0q-8 7-12 0q-6 7-12 0q-6 7-12 0q-4 7-14 0z" fill="#9be7ff" fill-opacity=".6" stroke="#d6f6ff" stroke-opacity=".9" stroke-width="1.5"/><path d="M14 44q-4 14 2 26M26 46q4 16-2 32M38 46q-4 16 2 30M48 44q4 14-2 22" stroke="#c9f3ff" stroke-opacity=".8" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="22" cy="30" r="2.2" fill="#0b3556"/><circle cx="38" cy="30" r="2.2" fill="#0b3556"/><path d="M26 36q4 3 8 0" stroke="#0b3556" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
+const H = "var(--hero-h)";
+const CREATURES = [
+  // 얕은 바다: 알록달록 작은 물고기
+  { e: "🐠", top: "calc(" + H + " + 90px)",  left: "3%",  size: 34, dur: 9 },
+  { e: "🐟", top: "calc(" + H + " + 250px)", right: "2%", size: 30, dur: 11 },
+  { e: "🐡", top: "calc(" + H + " + 560px)", left: "2%",  size: 36, dur: 13 },
+  { e: "🐠", top: "calc(" + H + " + 820px)", right: "3%", size: 32, dur: 10 },
+  // 중간 깊이
+  { e: "🐢", top: "46%", left: "4%",  size: 50, dur: 15 },
+  { e: "🐬", top: "54%", right: "3%", size: 54, dur: 12 },
+  { e: "🦈", top: "66%", left: "3%",  size: 60, dur: 16 },
+  // 깊은 바다 (페이지 맨 아래 기준)
+  { e: "🦑", bottom: "62vh", left: "10%", size: 54, dur: 13 },
+  { svg: SVG_JELLY, cls: "glow", bottom: "74vh", right: "22%", dur: 9 },
+  { svg: SVG_JELLY, cls: "glow", bottom: "48vh", left: "40%", dur: 12 },
+  { e: "🐙", bottom: "30vh", right: "12%", size: 52, dur: 14 },
+  { svg: SVG_ANGLER, cls: "glowy", bottom: "20vh", left: "14%", dur: 15 },
+  { e: "🦈", bottom: "34vh", left: "52%", size: 64, dur: 18 },
+  { svg: SVG_JELLY, cls: "glow", bottom: "12vh", right: "38%", dur: 10 },
+  { e: "🦞", bottom: "10px", left: "8%", size: 40, dur: 8 },
+  { e: "🐚", bottom: "14px", right: "10%", size: 30, dur: 20 },
+];
+(function buildSea() {
+  const box = $("creatures");
+  CREATURES.forEach((c) => {
+    const d = document.createElement("div");
+    d.className = "cr" + (c.cls ? " " + c.cls : "");
+    ["top", "bottom", "left", "right"].forEach((k) => { if (c[k]) d.style[k] = c[k]; });
+    d.style.setProperty("--dur", c.dur + "s");
+    d.style.animationDelay = "-" + (c.dur * Math.random()).toFixed(1) + "s";
+    if (c.e) { d.textContent = c.e; d.style.fontSize = c.size + "px"; } else { d.innerHTML = c.svg; }
+    box.appendChild(d);
+  });
+  // 심해 플랑크톤(반짝이)
+  for (let i = 0; i < 26; i++) {
+    const p = document.createElement("i");
+    p.className = "dot-p";
+    const sz = 2 + Math.random() * 3;
+    p.style.cssText = "width:" + sz + "px;height:" + sz + "px;left:" + (Math.random() * 100).toFixed(1) + "%;bottom:" +
+      (4 + Math.random() * 70).toFixed(0) + "vh;";
+    p.style.setProperty("--dur", (2 + Math.random() * 4).toFixed(1) + "s");
+    p.style.animationDelay = "-" + (Math.random() * 5).toFixed(1) + "s";
+    box.appendChild(p);
+  }
+  // 올라가는 거품
+  const bub = $("bubbles");
+  for (let i = 0; i < 14; i++) {
+    const b = document.createElement("span");
+    const sz = 6 + Math.random() * 14;
+    b.style.cssText = "width:" + sz + "px;height:" + sz + "px;left:" + (Math.random() * 100).toFixed(1) + "%;" +
+      "animation-duration:" + (10 + Math.random() * 12).toFixed(1) + "s;animation-delay:-" + (Math.random() * 14).toFixed(1) + "s;";
+    b.style.setProperty("--dx", (Math.random() * 60 - 30).toFixed(0) + "px");
+    bub.appendChild(b);
+  }
+})();
 </script>
 </body>
 </html>
