@@ -6,178 +6,315 @@
 <title>오낚고? 오늘 낚시 고?</title>
 <style>
   :root {
-    --bg: #eef6fb; --card: #ffffff; --ink: #14303f; --sub: #5b7686;
-    --line: #d5e4ee; --wave: #1f78c8; --cur: #e8890c; --rec: rgba(46,160,90,.18);
-    --green: #2ea05a; --yellow: #e0a800; --red: #d64545;
+    --bg: #eaf4fb; --card: #ffffff; --ink: #14303f; --sub: #5b7686; --line: #d5e4ee;
+    --wave: #1f78c8; --cur: #e8890c; --rec: rgba(46,160,90,.18);
+    --green: #2ea05a; --yellow: #e0a800; --red: #d64545; --land: #cfe3c8; --land-line: #8fb38a; --sea: #dcedf8;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0d1b24; --card: #14283a; --ink: #e6f1f8; --sub: #93adbd; --line: #25405a; }
+    :root { --bg: #0d1b24; --card: #14283a; --ink: #e6f1f8; --sub: #93adbd; --line: #25405a;
+      --land: #2c4a3a; --land-line: #4f7a63; --sea: #10263a; }
   }
   * { box-sizing: border-box; }
+  html { font-size: 16px; }
   body { margin: 0; background: var(--bg); color: var(--ink);
     font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif; line-height: 1.5; }
-  main { max-width: 480px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 1.5rem; margin: 4px 0 2px; }
-  .tag { color: var(--sub); margin: 0 0 14px; font-size: .95rem; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 14px 16px; margin-bottom: 12px; }
-  .row { display: flex; gap: 8px; }
-  select, button { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); }
-  select { flex: 1; background: var(--card); color: var(--ink); min-width: 0; }
-  button { background: var(--wave); color: #fff; border-color: var(--wave); font-weight: 700; cursor: pointer; white-space: nowrap; }
-  button:disabled { opacity: .6; cursor: default; }
-  .light { font-size: 1.35rem; font-weight: 800; margin: 0 0 4px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.8rem; margin: 4px 0 2px; }
+  .tag { color: var(--sub); margin: 0 0 14px; }
+  .layout { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+  @media (min-width: 900px) {
+    html { font-size: 18px; }
+    .layout { grid-template-columns: minmax(380px, 5fr) 6fr; }
+    .mapcard { position: sticky; top: 12px; }
+  }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px; }
+  .mapcard { padding: 10px; margin-bottom: 0; }
+  .mapcard h2 { margin: 2px 6px 4px; }
+  #map { max-height: 82vh; }
+  .land { fill: var(--land); stroke: var(--land-line); stroke-width: 1.5; stroke-linejoin: round; }
+  .sea { fill: var(--sea); }
+  .spot { cursor: pointer; }
+  .spot .dot { fill: #8aa1b0; stroke: #fff; stroke-width: 2.5; transition: r .15s; }
+  .spot:hover .dot, .spot:focus .dot { r: 10; }
+  .spot.sel .dot { stroke: var(--ink); stroke-width: 3; r: 10; }
+  .spot.green .dot { fill: var(--green); } .spot.yellow .dot { fill: var(--yellow); } .spot.red .dot { fill: var(--red); }
+  .spot text { font-size: 15px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--sea); stroke-width: 4px; pointer-events: none; }
+  .spot:focus { outline: none; }
+  .legend { color: var(--sub); font-size: .8rem; margin: 4px 6px 2px; }
+  h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  .light { font-size: 1.5rem; font-weight: 800; margin: 0 0 4px; }
   .light.green { color: var(--green); } .light.yellow { color: var(--yellow); } .light.red { color: var(--red); }
-  .nums { color: var(--sub); margin: 0; font-size: .95rem; }
-  h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .where { font-weight: 700; margin: 0; }
+  .nums { color: var(--sub); margin: 0; }
   .chart-title { font-size: .85rem; color: var(--sub); margin: 8px 0 2px; }
   svg { width: 100%; height: auto; display: block; }
   .rec { margin: 8px 0 0; font-weight: 700; }
   .trend { margin: 6px 0 0; }
-  .fish { display: flex; gap: 10px; align-items: flex-start; }
-  .fish .face { font-size: 2.2rem; line-height: 1; }
-  .fish p, .notes p { margin: 0 0 6px; }
-  .bubble { background: var(--bg); border-radius: 14px; padding: 8px 12px; }
-  .msg { color: var(--sub); margin: 0; }
+  .fishes { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 560px) { .fishes { grid-template-columns: 1fr 1fr; } }
+  .fish { background: var(--bg); border-radius: 16px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .fish .face { font-size: 2.4rem; line-height: 1; }
+  .fish b { display: block; }
+  .fish span { color: var(--sub); font-size: .92rem; }
+  .says { margin: 0 0 10px; font-weight: 700; }
+  .care p { margin: 6px 0 0; }
+  .msg { color: var(--sub); margin: 0 0 12px; }
   .err { color: var(--red); }
   footer { color: var(--sub); font-size: .8rem; text-align: center; padding: 6px 0 20px; }
   [hidden] { display: none !important; }
+  .picker { display: flex; gap: 8px; margin-bottom: 12px; }
+  select, button { font: inherit; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); }
+  select { flex: 1; min-width: 0; background: var(--card); color: var(--ink); }
+  button { background: var(--wave); color: #fff; border-color: var(--wave); font-weight: 700; cursor: pointer; white-space: nowrap; }
+  button:disabled { opacity: .6; cursor: default; }
 </style>
 </head>
 <body>
 <main>
   <h1>🎣 오낚고?</h1>
-  <p class="tag">오늘 낚시 고? 출발 전에 바다부터 확인!</p>
+  <p class="tag">오늘 낚시 고? 지도에서 낚시터를 눌러 봐요.</p>
 
-  <section class="card">
-    <div class="row">
-      <select id="spot" aria-label="낚시터 선택"></select>
-      <button id="go" type="button">오늘 낚시 고?</button>
-    </div>
-  </section>
+  <div class="layout">
+    <section class="card mapcard">
+      <h2>🗺️ 대한민국 낚시터 지도</h2>
+      <svg id="map" viewBox="0 0 600 631" role="group" aria-label="대한민국 낚시터 지도"></svg>
+      <p class="legend">점 색 = 신호등 (눌러 본 곳만 색이 바뀌어요) 🟢 가요 · 🟡 조심 · 🔴 쉬어요</p>
+    </section>
 
-  <p id="status" class="msg" role="status">낚시터를 고르고 버튼을 눌러 봐요.</p>
+    <section>
+      <div class="picker">
+        <select id="spot" aria-label="낚시터 선택"></select>
+        <button id="go" type="button">오늘 낚시 고?</button>
+      </div>
+      <p id="status" class="msg" role="status">지도에서 낚시터를 눌러 봐요.</p>
 
-  <section id="result" hidden>
-    <div class="card">
-      <p id="light" class="light"></p>
-      <p id="nums" class="nums"></p>
-    </div>
+      <div id="result" hidden>
+        <div class="card">
+          <p id="where" class="where"></p>
+          <p id="light" class="light"></p>
+          <p id="nums" class="nums"></p>
+        </div>
 
-    <div class="card">
-      <h2>⏰ 시간대별 (오늘)</h2>
-      <p class="chart-title">파도 높이 (m)</p>
-      <div id="chartWave"></div>
-      <p class="chart-title">해류 속도 (km/h)</p>
-      <div id="chartCur"></div>
-      <p id="rec" class="rec"></p>
-      <p id="trend" class="trend"></p>
-    </div>
+        <div class="card">
+          <h2>⏰ 시간대별 (오늘)</h2>
+          <p class="chart-title">파도 높이 (m)</p>
+          <div id="chartWave"></div>
+          <p class="chart-title">해류 속도 (km/h)</p>
+          <div id="chartCur"></div>
+          <p id="rec" class="rec"></p>
+          <p id="trend" class="trend"></p>
+        </div>
 
-    <div class="card">
-      <h2>🐟 오늘의 안내</h2>
-      <div class="fish">
-        <div class="face" aria-hidden="true" id="face">🐟</div>
-        <div class="notes">
-          <p class="bubble" id="fishTalk"></p>
-          <p id="careTalk"></p>
-          <p id="familyTalk"></p>
+        <div class="card">
+          <h2>🐟 오늘의 안내</h2>
+          <p id="says" class="says"></p>
+          <div id="fishes" class="fishes"></div>
+          <div class="care">
+            <p id="careTalk"></p>
+            <p id="familyTalk"></p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
   <footer>
-    데이터: Open-Meteo Marine API (모델 예측값, 참고용)<br>
-    신호등 기준은 임시값이고 안전을 보장하지 않아요. 현장 상황이 우선!
+    데이터: Open-Meteo Marine API (모델 예측값, 참고용) · 지도: Natural Earth<br>
+    신호등 기준과 어종 안내는 참고용이에요. 안전을 보장하지 않으니 현장 상황이 우선!
   </footer>
 </main>
 
 <script>
-// ---------- 설정 ----------
-// 부산 앞바다만 값 확인 완료. 나머지는 확인되면 그대로 쓰고, 값이 없으면 안내 문구가 나온다.
+// ---------- 낚시터 (lat, lon은 바다 쪽 점 / sea = 값이 없을 때 바다 쪽으로 밀어 볼 방향 / lab = 이름 위치) ----------
 const SPOTS = [
-  { name: "부산 앞바다", lat: 34.95, lon: 129.2 },
-  { name: "동해 (확인 필요)", lat: 38.2, lon: 128.7 },
-  { name: "서해 (확인 필요)", lat: 37.3, lon: 126.3 },
-  { name: "제주 (확인 필요)", lat: 33.3, lon: 126.9 },
+  { name: "고성·속초", lat: 38.25, lon: 128.7,  sea: [0, 1],  lab: "r" },
+  { name: "강릉",     lat: 37.75, lon: 129.2,  sea: [0, 1],  lab: "r" },
+  { name: "삼척",     lat: 37.4,  lon: 129.3,  sea: [0, 1],  lab: "r" },
+  { name: "울진",     lat: 36.95, lon: 129.6,  sea: [0, 1],  lab: "r" },
+  { name: "울릉도",   lat: 37.5,  lon: 130.9,  sea: [0, 1],  lab: "l" },
+  { name: "포항",     lat: 36.05, lon: 129.6,  sea: [0, 1],  lab: "r" },
+  { name: "울산",     lat: 35.5,  lon: 129.6,  sea: [0, 1],  lab: "r" },
+  { name: "부산",     lat: 34.95, lon: 129.2,  sea: [-1, 1], lab: "r" },
+  { name: "거제",     lat: 34.7,  lon: 128.85, sea: [-1, 0], lab: "b" },
+  { name: "통영",     lat: 34.5,  lon: 128.4,  sea: [-1, 0], lab: "b" },
+  { name: "여수",     lat: 34.45, lon: 127.8,  sea: [-1, 0], lab: "b" },
+  { name: "완도",     lat: 34.1,  lon: 126.7,  sea: [-1, 0], lab: "b" },
+  { name: "목포",     lat: 34.6,  lon: 126.0,  sea: [0, -1], lab: "l" },
+  { name: "군산",     lat: 35.9,  lon: 126.3,  sea: [0, -1], lab: "l" },
+  { name: "태안",     lat: 36.6,  lon: 125.9,  sea: [0, -1], lab: "l" },
+  { name: "인천",     lat: 37.4,  lon: 126.2,  sea: [0, -1], lab: "l" },
+  { name: "제주시",   lat: 33.7,  lon: 126.5,  sea: [1, 0],  lab: "r" },
+  { name: "서귀포",   lat: 33.15, lon: 126.55, sea: [-1, 0], lab: "r" },
 ];
 
-// 신호등 기준 (임시값: 아빠 인터뷰 후 수정)
+// ---------- 신호등 기준 (임시값) ----------
 const WAVE_YELLOW = 0.5, WAVE_RED = 1.0;   // m
 const CUR_YELLOW = 2, CUR_RED = 3;         // km/h
-
 const LEVELS = [
   { cls: "green",  icon: "🟢", text: "가도 좋아요" },
   { cls: "yellow", icon: "🟡", text: "조심해서 가요" },
   { cls: "red",    icon: "🔴", text: "오늘은 쉬어요" },
 ];
 
-// 수온 구간별 물고기 한마디 (참고용 문구: 아빠께 확인해서 고치기)
-const FISH_TALK = [
-  { max: 12,       face: "🥶", text: "수온 {t}°C… 바다가 꽁꽁! 나도 이불 속에 있고 싶다고~" },
-  { max: 17,       face: "🐟", text: "수온 {t}°C. 슬슬 입질 오는 시즌이래. 따뜻하게 입고 와, 형." },
-  { max: 21,       face: "😎", text: "수온 {t}°C. 활동하기 딱 좋은 온도! 오늘 좀 노는 날이다?" },
-  { max: 25,       face: "😏", text: "수온 {t}°C. 따뜻해서 물고기들이 여기저기 돌아다녀. 어디 있는지가 관건이야." },
-  { max: Infinity, face: "🥵", text: "수온 {t}°C. 물이 뜨끈해서 다들 깊은 데로 숨었어. 서두르지 마, 형." },
+// ---------- 수온별 대상어 (일반적으로 알려진 시즌 정보, 참고용) ----------
+const FISH_BY_TEMP = [
+  { max: 10, says: "🥶 수온 {t}°C! 바다가 꽁꽁~ 깊은 데서 이불 덮고 있는 애들이 많아.",
+    fish: [
+      { face: "🐟", name: "우럭", note: "바닥 근처에서 느릿느릿. 천천히 내려서 기다려 줘." },
+      { face: "🐡", name: "쥐노래미", note: "추워도 방파제 돌 틈에 숨어 있다는 소문이야." },
+    ] },
+  { max: 15, says: "😎 수온 {t}°C. 쌀쌀하지만 밤 불빛 아래 모이는 애들이 있어.",
+    fish: [
+      { face: "🐠", name: "볼락", note: "밤에 불빛 보고 모여! 작아도 맛은 인정." },
+      { face: "🐟", name: "학공치", note: "겨울 손님. 떼로 몰려오면 손맛이 좋대." },
+    ] },
+  { max: 20, says: "😏 수온 {t}°C. 딱 좋은 온도라 입맛 도는 날이야.",
+    fish: [
+      { face: "🐟", name: "감성돔", note: "갯바위의 황제. 눈치가 빨라서 조용히 접근!" },
+      { face: "🐠", name: "참돔", note: "분홍 옷 입은 멋쟁이. 힘이 세니까 방심 금지." },
+      { face: "🐟", name: "광어(넙치)", note: "모래 바닥에 납작 엎드려 있어. 바닥을 노려 봐." },
+    ] },
+  { max: 25, says: "🤙 수온 {t}°C. 활동량 폭발! 여기저기 돌아다녀서 어디 있나가 관건.",
+    fish: [
+      { face: "🐟", name: "농어", note: "조류 따라 사냥하는 날쌘돌이. 해류 센 시간대가 포인트." },
+      { face: "🐟", name: "전갱이·고등어", note: "떼로 몰려와서 입문자도 손맛 보기 좋아." },
+      { face: "🦑", name: "무늬오징어", note: "가을 에깅 스타! 눈치 빨라서 조용히 던져." },
+      { face: "🐙", name: "주꾸미", note: "가을 시즌 손님. 바닥을 톡톡 건드려 줘." },
+    ] },
+  { max: Infinity, says: "🥵 수온 {t}°C. 물이 뜨끈! 시원한 그늘 자리와 물 챙겨 와.",
+    fish: [
+      { face: "🐠", name: "벵에돔", note: "여름 갯바위 손님. 밑밥 향에 몰려든대." },
+      { face: "🐡", name: "돌돔", note: "줄무늬 근육맨. 줄 터지는 소리 각오!" },
+      { face: "🦑", name: "한치", note: "밤 불빛 아래 둥둥. 제주 여름 야경 낚시." },
+    ] },
 ];
 const CARE_TALK = {
-  green:  "파도도 해류도 잔잔해요. 그래도 구명조끼는 기본!",
-  yellow: "파도나 해류가 좀 있어요. 구명조끼 꼭 입고, 미끄러운 바위는 피해요.",
-  red:    "파도나 해류가 세요. 무리해서 가지 말고 날짜를 옮기는 게 좋아요.",
+  green:  "⚠️ 파도도 해류도 잔잔해요. 그래도 구명조끼는 기본!",
+  yellow: "⚠️ 파도나 해류가 좀 있어요. 구명조끼 꼭 입고, 미끄러운 바위는 피해요.",
+  red:    "⚠️ 파도나 해류가 세요. 무리하지 말고 날짜를 옮기는 게 좋아요.",
 };
 const FAMILY_TALK = {
-  green:  "가족은 그늘 있는 안전한 자리에서 간식 담당 😎",
-  yellow: "가족은 물가에서 떨어진 안쪽 자리에서 기다려요. 아이는 꼭 손잡기!",
-  red:    "가족과 함께라면 오늘은 육지 나들이로 바꿔요.",
+  green:  "👨‍👩‍👧 가족은 그늘 있는 안전한 자리에서 간식 담당 😎",
+  yellow: "👨‍👩‍👧 가족은 물가에서 떨어진 안쪽 자리에서 기다려요. 아이는 꼭 손잡기!",
+  red:    "👨‍👩‍👧 가족과 함께라면 오늘은 육지 나들이로 바꿔요.",
 };
 
-// ---------- 화면 요소 ----------
+// ---------- 지도 ----------
+const MAP = { k: 0.8090169943749475, scale: 110.69265470147388, lon0: 124.5, lat1: 38.7 };
+const project = (lon, lat) => [(lon - MAP.lon0) * MAP.k * MAP.scale, (MAP.lat1 - lat) * MAP.scale];
+const LAND_PATH = "M346 8L349 14L353 22L354 25L356 30L364 45L370 61L371 63L374 67L375 70L390 91L396 99L403 107L404 108L409 113L409 115L409 118L410 120L413 122L414 124L416 132L417 134L419 135L420 136L424 144L426 147L427 149L428 151L428 152L432 157L434 161L435 169L437 174L442 180L442 181L441 183L441 184L440 185L440 186L441 190L442 200L442 204L445 213L445 218L444 222L442 226L441 231L441 235L442 240L443 244L442 254L442 256L439 259L438 261L438 263L437 277L438 278L439 280L440 284L440 287L441 288L441 290L441 291L440 291L437 293L437 294L439 296L440 298L442 299L443 300L446 298L452 292L453 290L454 291L454 293L455 295L456 297L454 299L451 306L451 308L450 316L447 323L448 327L445 334L443 337L443 339L443 341L444 342L445 343L444 346L444 348L444 353L443 355L441 357L440 357L439 355L439 353L438 351L436 351L436 353L437 353L438 354L438 355L438 357L438 358L436 359L435 360L435 362L436 365L435 366L434 367L435 368L435 370L433 371L432 372L429 375L427 374L427 376L426 378L425 380L426 382L425 384L423 387L422 389L421 391L420 392L419 392L417 392L415 393L414 395L414 396L414 397L414 398L412 399L411 398L409 397L409 396L406 399L405 401L405 403L404 403L404 402L403 401L403 402L403 405L402 404L401 404L399 404L399 402L399 399L400 396L400 395L398 396L396 400L394 401L394 398L394 396L393 398L393 401L390 400L384 400L384 398L383 397L383 400L382 401L380 400L379 398L376 399L376 394L374 395L374 397L373 396L372 394L371 393L369 394L369 392L368 390L368 386L366 387L365 389L365 390L366 392L367 395L368 397L370 400L370 401L369 402L371 403L370 403L368 403L367 403L367 401L366 400L361 398L359 398L356 399L355 400L356 401L355 402L352 403L348 404L348 405L348 407L347 408L356 404L357 404L357 406L358 407L358 408L357 410L356 411L354 411L353 411L352 410L351 411L352 412L353 413L353 415L353 417L352 422L353 422L354 421L355 420L356 422L355 424L353 427L350 428L348 427L348 426L350 426L351 425L345 424L344 424L343 422L344 420L345 420L344 415L342 417L341 420L338 420L336 417L335 417L334 417L333 417L332 418L332 420L332 422L330 421L326 422L324 421L324 418L323 418L321 418L319 418L318 416L318 414L318 406L318 404L319 403L320 402L320 400L318 402L317 404L316 406L314 406L315 410L314 411L312 410L309 412L308 409L308 408L307 407L306 411L305 414L304 415L301 416L299 415L298 416L297 415L295 414L292 414L290 413L289 411L288 411L288 413L288 415L286 417L283 420L281 421L280 420L278 416L277 416L276 417L275 419L275 421L276 423L278 425L279 428L281 429L282 430L284 430L286 427L288 427L290 427L292 427L293 426L293 428L293 430L292 433L291 439L290 440L287 441L285 440L283 439L281 443L280 443L281 444L281 446L282 451L280 451L279 450L277 449L275 449L274 447L274 445L274 442L275 440L276 438L276 436L275 435L274 432L272 431L272 430L271 426L271 425L271 423L271 422L270 422L268 426L267 427L264 428L262 429L258 429L256 429L258 430L260 431L262 432L258 434L256 435L256 436L257 437L258 436L260 438L259 438L260 443L263 445L265 447L267 450L265 450L268 451L269 453L269 455L268 456L267 457L265 456L260 454L259 454L258 454L256 454L255 455L255 456L256 459L257 459L258 460L261 459L263 460L259 464L257 467L256 466L253 468L254 470L255 471L252 471L248 466L247 463L244 460L239 462L240 463L238 463L237 463L236 462L235 460L235 459L236 458L237 457L240 454L241 451L242 450L243 450L243 452L243 453L241 457L244 457L246 456L247 454L247 451L247 449L246 448L246 446L248 442L249 443L250 444L250 445L250 447L251 448L254 448L255 444L256 443L255 441L254 439L254 438L252 440L250 440L248 439L246 435L245 437L243 442L242 444L240 444L237 444L235 445L234 447L233 448L229 450L228 451L226 452L225 452L225 455L225 456L224 457L223 458L223 459L223 460L218 465L218 470L215 469L215 471L214 473L215 474L214 474L211 472L208 471L206 468L206 462L206 460L207 459L206 457L206 456L205 455L203 456L202 457L202 459L202 460L203 461L200 463L200 465L203 467L199 469L198 471L199 471L199 472L198 472L196 472L196 473L196 474L192 476L191 477L188 485L188 487L186 487L182 488L181 486L182 484L182 482L181 482L177 482L178 480L178 478L180 476L181 474L180 473L179 473L178 473L177 472L177 470L178 468L176 468L177 465L178 464L181 463L183 463L182 462L181 461L182 460L183 459L182 457L180 459L179 459L178 458L177 459L176 460L175 461L172 460L169 461L169 459L168 458L166 457L166 456L165 457L163 457L161 455L160 454L161 453L163 453L163 452L160 451L158 449L158 446L159 442L160 440L160 438L161 437L162 437L164 439L166 443L166 444L165 445L165 446L166 448L167 453L168 454L173 454L175 456L177 454L175 454L173 453L172 452L171 451L172 448L170 448L170 450L168 448L168 445L169 443L168 442L171 441L175 442L175 444L175 446L176 447L177 448L179 449L180 450L181 451L182 451L181 448L182 448L184 449L186 450L188 451L190 451L188 450L187 449L184 447L183 445L180 441L178 440L176 440L173 440L172 438L169 439L167 438L167 437L168 436L169 435L172 436L176 434L180 437L181 437L182 438L182 436L182 434L183 432L185 432L189 433L191 433L191 432L192 431L194 431L193 429L191 429L186 429L186 428L186 426L187 424L187 422L187 421L185 420L184 421L183 422L183 425L183 426L182 429L181 432L180 434L178 434L178 433L179 431L178 430L176 431L173 431L172 433L171 433L169 433L167 431L168 431L170 429L171 428L171 426L171 423L172 422L171 421L170 419L170 417L170 415L171 414L173 413L171 411L169 412L168 413L168 414L168 415L168 417L167 418L165 418L164 417L163 417L164 416L163 415L162 414L162 412L166 413L165 410L168 408L167 405L165 402L163 400L161 400L162 402L161 404L160 404L159 402L160 401L157 398L157 396L158 394L160 394L162 395L163 397L164 396L164 395L165 392L166 394L166 397L165 398L165 399L167 400L167 401L168 402L170 402L171 404L171 405L171 406L172 407L175 402L175 400L175 398L173 397L171 396L170 394L167 390L167 389L167 388L168 386L167 385L167 383L165 384L162 384L163 382L165 382L167 382L168 382L167 381L167 380L168 379L169 377L168 376L168 373L169 372L171 369L173 371L175 371L175 371L172 367L172 366L172 363L174 360L177 354L178 351L181 350L185 350L187 350L189 348L190 347L192 346L194 348L195 350L197 350L195 346L194 344L193 344L180 346L176 343L176 340L176 339L178 338L180 336L182 334L185 332L188 331L190 327L191 324L192 323L193 322L197 321L200 322L202 323L203 324L204 325L205 325L205 323L205 322L204 321L201 320L199 318L198 317L197 316L198 315L200 314L205 314L206 314L207 313L208 311L209 311L209 310L208 309L206 309L200 311L198 312L194 311L189 311L189 309L189 306L185 305L181 305L181 302L189 301L194 301L198 300L199 300L201 300L203 299L206 297L210 295L212 294L212 292L207 294L205 294L203 295L202 297L200 298L198 298L197 299L195 298L194 297L194 295L193 294L192 292L191 291L192 289L190 288L189 288L187 284L186 284L184 284L184 283L182 282L180 282L179 284L179 281L182 280L185 279L188 280L187 278L186 277L185 276L184 276L183 275L184 269L185 267L187 266L186 265L182 264L180 263L182 262L186 261L187 260L186 258L185 258L182 258L180 256L179 255L180 255L179 252L181 251L182 251L184 248L188 247L190 246L184 246L183 247L181 250L180 250L179 249L178 247L177 245L177 244L179 242L180 240L178 240L177 240L177 239L176 238L176 236L176 234L175 233L177 233L178 232L180 232L180 231L181 230L180 229L178 227L178 226L180 225L179 223L177 223L177 221L177 220L179 219L178 218L177 216L175 218L174 219L174 220L174 221L174 223L174 225L174 228L173 231L172 232L171 231L169 230L167 229L167 223L168 221L167 221L167 218L167 217L165 217L164 218L164 220L163 221L161 221L162 223L164 226L164 228L163 228L165 231L164 232L163 232L162 233L161 234L161 233L160 231L161 229L159 224L159 222L159 219L157 220L155 223L153 224L151 224L149 224L148 222L149 221L153 221L153 218L152 217L151 216L150 216L148 215L148 216L148 219L147 220L146 221L146 217L146 215L148 211L149 208L149 210L150 211L151 212L153 212L153 211L152 209L154 210L155 210L156 208L154 208L152 208L152 206L153 204L151 202L152 201L153 200L155 199L155 202L156 202L158 202L159 201L160 199L159 195L160 192L162 192L162 193L162 196L162 198L163 201L163 202L162 203L161 204L161 205L162 207L161 208L160 209L160 210L160 211L163 210L166 211L164 208L164 205L165 204L166 206L167 206L167 205L169 204L171 204L170 203L168 202L170 201L172 199L172 197L171 195L168 195L167 194L166 193L166 192L167 193L168 191L167 190L166 190L164 190L166 188L168 188L169 189L169 188L173 187L174 188L175 189L174 191L173 192L174 194L176 193L177 194L177 195L177 196L176 197L176 203L176 204L177 205L178 202L180 197L180 195L182 195L184 196L184 198L185 199L187 200L186 198L185 196L184 195L179 189L179 187L180 188L182 190L184 191L186 191L185 189L184 189L182 188L180 186L179 184L179 182L181 182L182 183L184 184L185 185L187 186L189 188L190 189L191 190L191 192L190 193L191 195L191 196L191 198L192 197L192 196L192 193L193 192L194 189L195 189L197 189L198 189L200 190L202 190L204 191L206 193L206 195L204 200L206 200L207 197L209 198L209 200L209 203L209 205L209 207L210 208L210 212L209 213L209 215L210 215L211 213L212 211L212 210L212 207L214 208L215 208L212 205L211 203L213 202L215 202L219 200L222 198L223 197L224 196L225 193L224 192L225 191L226 191L227 190L228 189L222 190L221 191L222 195L221 196L219 196L216 196L213 194L209 191L208 188L214 187L212 186L214 186L216 187L216 185L214 183L213 180L214 178L213 177L212 178L212 180L212 182L211 184L209 183L208 184L206 184L202 183L202 182L202 180L202 179L202 177L203 175L204 174L206 173L207 172L209 172L212 171L212 169L210 169L209 171L207 170L206 169L206 168L204 169L202 170L199 173L197 174L196 174L196 172L198 170L195 171L194 169L194 168L196 167L197 167L198 166L199 165L196 165L195 164L195 163L194 161L193 160L195 159L196 160L198 159L199 160L200 160L202 161L203 160L203 161L203 162L204 163L205 163L206 162L206 160L208 158L209 158L210 159L212 159L211 157L210 156L208 156L206 155L205 156L203 155L200 154L196 151L196 150L197 148L199 146L194 145L192 148L189 146L190 144L192 142L191 141L189 140L188 140L188 137L187 136L188 134L191 134L192 132L191 132L189 133L188 132L188 130L188 127L187 125L187 123L186 122L185 121L185 120L184 117L183 114L182 105L182 103L188 105L190 104L191 104L194 104L194 106L194 108L194 110L194 111L194 114L196 116L200 117L202 118L200 116L195 112L197 108L197 106L197 104L196 102L196 100L196 98L197 96L196 96L194 97L194 87L194 84L195 84L197 83L199 82L203 80L210 68L212 67L215 64L217 62L218 58L220 55L221 54L226 49L232 46L238 43L244 43L246 43L258 42L266 45L269 45L274 43L291 41L292 42L293 44L295 45L302 44L311 44L317 44L323 42L329 38L334 33L336 30L337 27L339 24L339 20L338 16L338 14L339 13L341 11L346 8ZM171 248L171 250L173 252L173 254L168 254L167 253L167 252L168 251L168 249L166 251L165 250L165 249L167 246L165 247L165 246L164 247L164 244L164 240L163 238L163 234L163 234L165 232L167 231L168 233L167 235L167 236L168 240L169 241L169 242L170 243L171 244L169 244L169 245L171 246L170 247L171 248ZM161 99L163 99L164 100L165 100L164 102L163 104L161 104L157 103L155 104L154 103L155 99L157 98L158 98L159 98L161 99ZM219 578L220 580L218 580L218 582L218 583L218 584L217 585L216 587L213 590L212 592L210 594L210 597L207 597L204 597L201 600L192 602L189 604L185 605L181 605L177 606L173 605L164 605L162 606L160 609L158 609L157 608L155 605L152 604L150 601L149 598L150 593L152 590L153 589L156 588L158 583L161 582L162 580L166 578L176 575L178 573L187 572L192 570L194 570L201 569L205 568L208 569L209 571L210 572L215 574L216 575L217 578L218 580L219 579L219 578ZM239 467L242 466L244 466L245 467L246 469L246 471L244 473L243 473L239 474L237 474L236 473L235 472L235 470L234 469L235 468L236 467L239 467ZM168 465L168 467L168 468L168 470L166 474L165 475L164 476L163 474L162 476L153 481L148 481L147 481L147 479L148 478L146 476L146 478L144 476L145 472L147 469L150 469L150 466L151 465L152 465L153 464L154 463L155 462L156 463L157 463L158 462L159 461L158 459L156 458L157 457L158 457L159 457L161 458L162 459L163 461L166 460L168 465ZM294 445L296 446L296 448L297 450L297 452L297 454L296 455L295 456L294 456L293 456L290 452L290 451L290 449L292 447L293 444L292 442L293 441L295 441L295 442L295 443L294 445ZM133 441L134 442L135 444L134 445L133 447L132 448L131 447L129 446L128 446L127 444L128 443L130 442L132 440L133 441ZM135 434L135 436L134 436L132 437L131 437L129 437L129 438L129 439L128 440L127 441L125 440L125 439L125 437L125 436L126 435L127 434L129 434L130 434L133 433L135 433L135 434ZM139 419L140 418L142 418L142 419L143 421L142 422L142 424L140 425L139 425L138 424L134 425L133 425L134 423L136 421L137 420L138 420L139 419ZM320 430L320 431L320 432L319 434L319 435L319 437L319 439L318 440L319 442L318 443L317 443L316 442L314 442L313 442L311 443L310 441L309 436L308 435L307 436L306 438L305 440L304 441L303 441L301 439L301 438L301 436L298 428L298 426L298 424L299 422L300 422L301 421L302 419L304 417L305 416L306 417L307 418L308 419L308 421L307 422L305 424L305 425L306 427L307 428L309 429L310 431L312 431L314 430L316 429L319 430L320 430ZM381 424L380 425L380 427L378 427L378 428L380 431L380 433L378 432L376 431L375 431L374 432L373 435L372 437L373 437L375 438L374 440L368 442L366 442L369 440L367 439L367 437L368 435L365 437L364 436L364 435L364 434L366 433L367 431L367 430L368 428L366 427L365 428L362 430L361 431L360 429L358 428L357 426L357 424L358 423L359 422L360 421L362 420L365 420L367 420L368 421L370 422L371 422L370 420L369 418L368 416L368 415L369 415L375 411L374 409L375 407L376 406L378 407L378 408L378 413L378 415L379 417L379 418L379 420L377 423L379 423L380 422L381 424ZM144 404L141 403L140 403L140 399L140 398L142 397L144 396L144 395L146 394L148 393L149 394L147 395L146 396L146 397L146 398L147 400L145 402L145 403L144 404ZM185 131L186 132L186 133L185 135L183 135L182 136L180 137L178 138L178 139L174 142L172 142L172 140L170 140L170 139L169 140L167 139L167 138L167 137L167 136L168 136L172 133L175 133L177 133L178 132L179 129L180 129L181 130L183 131L184 131L185 131ZM573 128L575 129L575 132L574 135L573 137L571 138L569 137L567 136L565 134L565 132L565 130L567 129L570 129L572 128L573 128ZM166 111L167 112L168 113L168 114L167 115L166 115L159 111L160 110L161 107L162 106L163 105L164 106L164 108L165 110L166 111ZM180 122L178 122L177 121L176 121L171 122L169 121L167 118L170 118L172 116L171 114L167 109L167 106L167 101L168 100L171 97L172 97L174 98L175 100L177 101L179 102L181 103L181 105L180 107L181 109L181 110L182 115L182 117L183 118L182 119L181 121L180 122ZM21 80L22 81L22 82L20 83L19 82L16 82L16 84L18 85L17 86L13 86L10 84L11 80L13 80L18 79L21 80ZM143 454L144 456L143 457L143 458L142 460L139 461L138 461L139 460L137 459L139 458L140 458L141 457L142 456L141 455L140 453L140 451L141 452L143 453L143 454ZM150 439L150 441L150 442L148 442L147 441L147 440L145 441L144 440L143 438L141 436L140 435L142 435L144 435L145 435L146 436L148 437L149 437L150 438L150 439ZM141 429L141 428L140 427L142 425L144 426L145 425L145 424L147 423L148 424L147 425L147 427L147 428L146 428L145 430L144 432L143 431L141 429ZM320 427L321 428L316 427L314 428L312 428L311 427L310 425L311 423L312 422L313 420L314 419L315 419L315 420L315 422L314 423L315 424L316 423L317 422L318 422L319 423L319 424L319 426L320 427ZM189 160L190 161L189 162L185 166L183 166L184 164L183 163L185 162L185 160L184 159L183 158L185 157L186 156L186 158L187 159L189 160L189 160ZM211 486L210 487L209 485L208 484L206 485L205 485L202 483L204 483L206 482L207 482L208 481L210 482L211 482L212 482L214 482L214 483L214 484L213 486L211 486L211 486ZM232 482L230 482L230 484L228 485L227 486L228 484L226 483L226 481L224 481L225 480L225 479L226 478L228 480L229 481L230 481L231 481L232 482ZM203 486L203 488L201 488L200 488L198 488L196 487L197 485L196 485L194 484L193 484L192 483L192 482L192 480L192 479L192 478L193 477L194 476L196 476L198 477L199 478L200 480L200 482L201 483L203 486ZM203 478L202 477L203 475L205 473L206 472L208 472L210 472L209 474L210 474L211 476L209 476L208 477L206 478L205 480L204 481L203 479L203 478ZM348 429L350 429L352 429L353 430L353 431L353 432L352 433L353 434L351 436L350 436L349 434L348 433L347 432L347 431L347 430L345 429L344 430L344 428L346 428L347 429L348 429ZM165 425L167 425L167 428L165 429L165 428L162 426L159 426L158 427L157 427L155 426L157 425L159 424L159 423L161 422L160 420L160 419L163 419L164 420L165 421L164 422L163 423L163 424L165 425ZM155 404L153 403L151 403L150 402L148 399L149 398L151 398L153 399L154 398L156 399L155 400L154 401L155 402L157 402L157 404L158 406L157 407L156 407L155 405L155 404Z";
+
 const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const results = {}; // 눌러 본 낚시터의 신호등 색
+let selected = 0;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  Object.keys(attrs || {}).forEach((k) => e.setAttribute(k, attrs[k]));
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function buildMap() {
+  const svg = $("map");
+  el("rect", { class: "sea", x: 0, y: 0, width: 600, height: 631, rx: 14 }, svg);
+  el("path", { class: "land", d: LAND_PATH, "fill-rule": "evenodd" }, svg);
+  SPOTS.forEach((s, i) => {
+    const [x, y] = project(s.lon, s.lat);
+    const g = el("g", { class: "spot", tabindex: 0, role: "button", "aria-label": s.name + " 낚시터" }, svg);
+    g.dataset.i = i;
+    el("circle", { class: "hit", cx: x, cy: y, r: 18, fill: "transparent" }, g);
+    el("circle", { class: "dot", cx: x, cy: y, r: 7 }, g);
+    const t = el("text", { x: x, y: y }, g);
+    t.textContent = s.name;
+    if (s.lab === "r") { t.setAttribute("x", x + 13); t.setAttribute("y", y + 5); }
+    else if (s.lab === "l") { t.setAttribute("x", x - 13); t.setAttribute("y", y + 5); t.setAttribute("text-anchor", "end"); }
+    else { t.setAttribute("y", y + 28); t.setAttribute("text-anchor", "middle"); }
+    g.addEventListener("click", () => pick(i));
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(i); } });
+  });
+}
+
+function markSelected() {
+  document.querySelectorAll(".spot").forEach((g) => {
+    const i = Number(g.dataset.i);
+    g.classList.toggle("sel", i === selected);
+    g.classList.remove("green", "yellow", "red");
+    if (results[i]) g.classList.add(results[i]);
+  });
+}
+
+function pick(i) {
+  selected = i;
+  $("spot").value = i;
+  markSelected();
+  load();
+}
+
+// ---------- 시작 ----------
 const spotSel = $("spot");
 SPOTS.forEach((s, i) => spotSel.add(new Option(s.name, i)));
-
-$("go").addEventListener("click", load);
+buildMap();
+markSelected();
+spotSel.addEventListener("change", () => { selected = Number(spotSel.value); markSelected(); });
+$("go").addEventListener("click", () => { selected = Number(spotSel.value); markSelected(); load(); });
 
 // ---------- 데이터 불러오기 ----------
-async function load() {
-  const spot = SPOTS[spotSel.value];
-  const url = "https://marine-api.open-meteo.com/v1/marine?latitude=" + spot.lat +
-    "&longitude=" + spot.lon +
+function makeUrl(lat, lon) {
+  return "https://marine-api.open-meteo.com/v1/marine?latitude=" + lat.toFixed(3) + "&longitude=" + lon.toFixed(3) +
     "&hourly=sea_surface_temperature,wave_height,ocean_current_velocity" +
     "&past_days=7&forecast_days=1&timezone=Asia%2FSeoul";
+}
 
-  const btn = $("go");
-  btn.disabled = true;
-  showStatus("바다 보는 중… 🌊");
-  $("result").hidden = true;
-
+async function fetchJson(url) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const m = parse(data);
-    if (!m) { showStatus("이 낚시터는 데이터가 없어요. 바다 쪽 다른 낚시터를 골라 봐요.", true); return; }
-    render(m, spot);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+
+// 값이 비어 있으면 바다 쪽으로 0.1도씩 밀어서 최대 3번 더 시도한다.
+async function fetchSpot(spot) {
+  for (let step = 0; step <= 3; step++) {
+    const lat = spot.lat + spot.sea[0] * 0.1 * step;
+    const lon = spot.lon + spot.sea[1] * 0.1 * step;
+    const m = parse(await fetchJson(makeUrl(lat, lon)));
+    if (m) return m;
+  }
+  return null;
+}
+
+let seq = 0;
+async function load() {
+  const my = ++seq;
+  const idx = selected, spot = SPOTS[idx];
+  $("go").disabled = true;
+  showStatus(spot.name + " 바다 보는 중… 🌊");
+  $("result").hidden = true;
+  try {
+    const m = await fetchSpot(spot);
+    if (my !== seq) return;
+    if (!m) { showStatus(spot.name + "은(는) 데이터가 없어요. 다른 낚시터를 골라 봐요.", true); return; }
+    render(m, spot, idx);
   } catch (e) {
+    if (my !== seq) return;
     showStatus("바다 정보를 못 불러왔어요. 잠시 뒤 '오늘 낚시 고?'를 다시 눌러 주세요.", true);
   } finally {
-    clearTimeout(timer);
-    btn.disabled = false;
+    if (my === seq) $("go").disabled = false;
   }
 }
 
 // JSON에서 오늘(마지막 날짜)과 7일 전(첫 날짜) 값을 나눠 담는다.
 function parse(data) {
   const h = data && data.hourly;
-  if (!h || !Array.isArray(h.time)) return null;
+  if (!h || !Array.isArray(h.time) || !h.time.length) return null;
   const t = h.time, sst = h.sea_surface_temperature, wh = h.wave_height, oc = h.ocean_current_velocity;
   if (!sst || !wh || !oc) return null;
-
-  const todayStr = t[t.length - 1].slice(0, 10);
-  const firstStr = t[0].slice(0, 10);
+  const todayStr = t[t.length - 1].slice(0, 10), firstStr = t[0].slice(0, 10);
   const today = { hours: [], sst: [], wave: [], cur: [] };
   const first = [];
   t.forEach((ts, i) => {
@@ -185,9 +322,7 @@ function parse(data) {
     if (d === todayStr) {
       today.hours.push(Number(ts.slice(11, 13)));
       today.sst.push(sst[i]); today.wave.push(wh[i]); today.cur.push(oc[i]);
-    } else if (d === firstStr && sst[i] !== null) {
-      first.push(sst[i]);
-    }
+    } else if (d === firstStr && typeof sst[i] === "number") first.push(sst[i]);
   });
   const ok = (a) => a.length > 0 && a.every((v) => typeof v === "number");
   if (!ok(today.sst) || !ok(today.wave) || !ok(today.cur)) return null;
@@ -196,10 +331,10 @@ function parse(data) {
 
 // ---------- 계산 ----------
 const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+const pad = (n) => String(n).padStart(2, "0");
 const levelOf = (v, y, r) => (v >= r ? 2 : v >= y ? 1 : 0);
 
 function bestWindow(today) {
-  // 낮 시간(5~20시) 중 파도·해류가 가장 낮은 연속 3시간
   const len = 3;
   let best = null;
   for (let i = 0; i + len <= today.hours.length; i++) {
@@ -211,14 +346,18 @@ function bestWindow(today) {
   return best;
 }
 
-// ---------- 그리기 ----------
-function render(m, spot) {
+// ---------- 화면 ----------
+function render(m, spot, idx) {
   const d = m.today;
   const maxWave = Math.max(...d.wave), maxCur = Math.max(...d.cur);
   const lvl = Math.max(levelOf(maxWave, WAVE_YELLOW, WAVE_RED), levelOf(maxCur, CUR_YELLOW, CUR_RED));
   const L = LEVELS[lvl];
   const temp = avg(d.sst);
 
+  results[idx] = L.cls;
+  markSelected();
+
+  $("where").textContent = "📍 " + spot.name;
   const light = $("light");
   light.className = "light " + L.cls;
   light.textContent = L.icon + " " + L.text;
@@ -240,17 +379,25 @@ function render(m, spot) {
     $("trend").textContent = "수온 7일 변화: " + arrow + " " + (diff > 0 ? "+" : "") + diff.toFixed(1) + "°C (7일 전 대비)";
   }
 
-  const fish = FISH_TALK.find((f) => temp < f.max);
-  $("face").textContent = fish.face;
-  $("fishTalk").textContent = fish.text.replace("{t}", temp.toFixed(1));
-  $("careTalk").textContent = "⚠️ " + CARE_TALK[L.cls];
-  $("familyTalk").textContent = "👨‍👩‍👧 " + FAMILY_TALK[L.cls];
+  const band = FISH_BY_TEMP.find((f) => temp < f.max);
+  $("says").textContent = band.says.replace("{t}", temp.toFixed(1));
+  const box = $("fishes");
+  box.textContent = "";
+  band.fish.forEach((f) => {
+    const card = document.createElement("div"); card.className = "fish";
+    const face = document.createElement("div"); face.className = "face"; face.textContent = f.face;
+    const txt = document.createElement("div");
+    const b = document.createElement("b"); b.textContent = f.name;
+    const s = document.createElement("span"); s.textContent = f.note;
+    txt.append(b, s); card.append(face, txt); box.appendChild(card);
+  });
+  $("careTalk").textContent = CARE_TALK[L.cls];
+  $("familyTalk").textContent = FAMILY_TALK[L.cls];
 
-  showStatus(spot.name + " · " + m.todayStr + " 예측 (참고용)");
+  showStatus(spot.name + " · " + m.todayStr + " 예측 (참고용: 어종은 일반적인 시즌 정보)");
   $("result").hidden = false;
+  if (window.matchMedia("(max-width: 899px)").matches) $("status").scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
-const pad = (n) => String(n).padStart(2, "0");
 
 // 간단한 SVG 선 그래프 (라이브러리 없음)
 function chart(d, vals, color, yThr, rThr, win) {
@@ -259,37 +406,31 @@ function chart(d, vals, color, yThr, rThr, win) {
   const x = (i) => L + (i / (vals.length - 1)) * (W - L - R);
   const y = (v) => T + (1 - v / maxY) * (H - T - B);
   let s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="시간대별 그래프">';
-  // 추천 시간 구간
   if (win) {
     const i0 = d.hours.indexOf(win.from), i1 = Math.min(d.hours.indexOf(win.to), vals.length - 1);
     const x0 = x(i0), x1 = i1 >= 0 ? x(i1) : x(vals.length - 1);
     s += '<rect x="' + x0 + '" y="' + T + '" width="' + (x1 - x0) + '" height="' + (H - T - B) + '" fill="var(--rec)"/>';
   }
-  // 기준선
   [[yThr, "var(--yellow)"], [rThr, "var(--red)"]].forEach(([v, c]) => {
     if (v <= maxY) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) +
       '" stroke="' + c + '" stroke-dasharray="4 3" stroke-width="1"/>' +
       '<text x="' + (L - 4) + '" y="' + (y(v) + 3) + '" font-size="9" text-anchor="end" fill="var(--sub)">' + v + "</text>";
   });
-  // 가로축 시간
   [0, 6, 12, 18, 23].forEach((hr) => {
     const i = d.hours.indexOf(hr);
     if (i >= 0) s += '<text x="' + x(i) + '" y="' + (H - 5) + '" font-size="9" text-anchor="middle" fill="var(--sub)">' + hr + "시</text>";
   });
-  // 선
   const pts = vals.map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
   s += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round"/>';
-  // 지금 시각 표시
-  const nowH = new Date().getHours();
-  const ni = d.hours.indexOf(nowH);
+  const ni = d.hours.indexOf(new Date().getHours());
   if (ni >= 0) s += '<circle cx="' + x(ni) + '" cy="' + y(vals[ni]) + '" r="4" fill="' + color + '" stroke="var(--card)" stroke-width="2"/>';
   return s + "</svg>";
 }
 
 function showStatus(text, isErr) {
-  const el = $("status");
-  el.textContent = text;
-  el.className = "msg" + (isErr ? " err" : "");
+  const e = $("status");
+  e.textContent = text;
+  e.className = "msg" + (isErr ? " err" : "");
 }
 </script>
 </body>
