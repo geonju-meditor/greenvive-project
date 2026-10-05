@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오낚고? 오늘 낚시 고?</title>
+<style>
+  :root {
+    --bg: #eef6fb; --card: #ffffff; --ink: #14303f; --sub: #5b7686;
+    --line: #d5e4ee; --wave: #1f78c8; --cur: #e8890c; --rec: rgba(46,160,90,.18);
+    --green: #2ea05a; --yellow: #e0a800; --red: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1b24; --card: #14283a; --ink: #e6f1f8; --sub: #93adbd; --line: #25405a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif; line-height: 1.5; }
+  main { max-width: 480px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.5rem; margin: 4px 0 2px; }
+  .tag { color: var(--sub); margin: 0 0 14px; font-size: .95rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px 16px; margin-bottom: 12px; }
+  .row { display: flex; gap: 8px; }
+  select, button { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); }
+  select { flex: 1; background: var(--card); color: var(--ink); min-width: 0; }
+  button { background: var(--wave); color: #fff; border-color: var(--wave); font-weight: 700; cursor: pointer; white-space: nowrap; }
+  button:disabled { opacity: .6; cursor: default; }
+  .light { font-size: 1.35rem; font-weight: 800; margin: 0 0 4px; }
+  .light.green { color: var(--green); } .light.yellow { color: var(--yellow); } .light.red { color: var(--red); }
+  .nums { color: var(--sub); margin: 0; font-size: .95rem; }
+  h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  .chart-title { font-size: .85rem; color: var(--sub); margin: 8px 0 2px; }
+  svg { width: 100%; height: auto; display: block; }
+  .rec { margin: 8px 0 0; font-weight: 700; }
+  .trend { margin: 6px 0 0; }
+  .fish { display: flex; gap: 10px; align-items: flex-start; }
+  .fish .face { font-size: 2.2rem; line-height: 1; }
+  .fish p, .notes p { margin: 0 0 6px; }
+  .bubble { background: var(--bg); border-radius: 14px; padding: 8px 12px; }
+  .msg { color: var(--sub); margin: 0; }
+  .err { color: var(--red); }
+  footer { color: var(--sub); font-size: .8rem; text-align: center; padding: 6px 0 20px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎣 오낚고?</h1>
+  <p class="tag">오늘 낚시 고? 출발 전에 바다부터 확인!</p>
+
+  <section class="card">
+    <div class="row">
+      <select id="spot" aria-label="낚시터 선택"></select>
+      <button id="go" type="button">오늘 낚시 고?</button>
+    </div>
+  </section>
+
+  <p id="status" class="msg" role="status">낚시터를 고르고 버튼을 눌러 봐요.</p>
+
+  <section id="result" hidden>
+    <div class="card">
+      <p id="light" class="light"></p>
+      <p id="nums" class="nums"></p>
+    </div>
+
+    <div class="card">
+      <h2>⏰ 시간대별 (오늘)</h2>
+      <p class="chart-title">파도 높이 (m)</p>
+      <div id="chartWave"></div>
+      <p class="chart-title">해류 속도 (km/h)</p>
+      <div id="chartCur"></div>
+      <p id="rec" class="rec"></p>
+      <p id="trend" class="trend"></p>
+    </div>
+
+    <div class="card">
+      <h2>🐟 오늘의 안내</h2>
+      <div class="fish">
+        <div class="face" aria-hidden="true" id="face">🐟</div>
+        <div class="notes">
+          <p class="bubble" id="fishTalk"></p>
+          <p id="careTalk"></p>
+          <p id="familyTalk"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    데이터: Open-Meteo Marine API (모델 예측값, 참고용)<br>
+    신호등 기준은 임시값이고 안전을 보장하지 않아요. 현장 상황이 우선!
+  </footer>
+</main>
+
+<script>
+// ---------- 설정 ----------
+// 부산 앞바다만 값 확인 완료. 나머지는 확인되면 그대로 쓰고, 값이 없으면 안내 문구가 나온다.
+const SPOTS = [
+  { name: "부산 앞바다", lat: 34.95, lon: 129.2 },
+  { name: "동해 (확인 필요)", lat: 38.2, lon: 128.7 },
+  { name: "서해 (확인 필요)", lat: 37.3, lon: 126.3 },
+  { name: "제주 (확인 필요)", lat: 33.3, lon: 126.9 },
+];
+
+// 신호등 기준 (임시값: 아빠 인터뷰 후 수정)
+const WAVE_YELLOW = 0.5, WAVE_RED = 1.0;   // m
+const CUR_YELLOW = 2, CUR_RED = 3;         // km/h
+
+const LEVELS = [
+  { cls: "green",  icon: "🟢", text: "가도 좋아요" },
+  { cls: "yellow", icon: "🟡", text: "조심해서 가요" },
+  { cls: "red",    icon: "🔴", text: "오늘은 쉬어요" },
+];
+
+// 수온 구간별 물고기 한마디 (참고용 문구: 아빠께 확인해서 고치기)
+const FISH_TALK = [
+  { max: 12,       face: "🥶", text: "수온 {t}°C… 바다가 꽁꽁! 나도 이불 속에 있고 싶다고~" },
+  { max: 17,       face: "🐟", text: "수온 {t}°C. 슬슬 입질 오는 시즌이래. 따뜻하게 입고 와, 형." },
+  { max: 21,       face: "😎", text: "수온 {t}°C. 활동하기 딱 좋은 온도! 오늘 좀 노는 날이다?" },
+  { max: 25,       face: "😏", text: "수온 {t}°C. 따뜻해서 물고기들이 여기저기 돌아다녀. 어디 있는지가 관건이야." },
+  { max: Infinity, face: "🥵", text: "수온 {t}°C. 물이 뜨끈해서 다들 깊은 데로 숨었어. 서두르지 마, 형." },
+];
+const CARE_TALK = {
+  green:  "파도도 해류도 잔잔해요. 그래도 구명조끼는 기본!",
+  yellow: "파도나 해류가 좀 있어요. 구명조끼 꼭 입고, 미끄러운 바위는 피해요.",
+  red:    "파도나 해류가 세요. 무리해서 가지 말고 날짜를 옮기는 게 좋아요.",
+};
+const FAMILY_TALK = {
+  green:  "가족은 그늘 있는 안전한 자리에서 간식 담당 😎",
+  yellow: "가족은 물가에서 떨어진 안쪽 자리에서 기다려요. 아이는 꼭 손잡기!",
+  red:    "가족과 함께라면 오늘은 육지 나들이로 바꿔요.",
+};
+
+// ---------- 화면 요소 ----------
+const $ = (id) => document.getElementById(id);
+const spotSel = $("spot");
+SPOTS.forEach((s, i) => spotSel.add(new Option(s.name, i)));
+
+$("go").addEventListener("click", load);
+
+// ---------- 데이터 불러오기 ----------
+async function load() {
+  const spot = SPOTS[spotSel.value];
+  const url = "https://marine-api.open-meteo.com/v1/marine?latitude=" + spot.lat +
+    "&longitude=" + spot.lon +
+    "&hourly=sea_surface_temperature,wave_height,ocean_current_velocity" +
+    "&past_days=7&forecast_days=1&timezone=Asia%2FSeoul";
+
+  const btn = $("go");
+  btn.disabled = true;
+  showStatus("바다 보는 중… 🌊");
+  $("result").hidden = true;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const m = parse(data);
+    if (!m) { showStatus("이 낚시터는 데이터가 없어요. 바다 쪽 다른 낚시터를 골라 봐요.", true); return; }
+    render(m, spot);
+  } catch (e) {
+    showStatus("바다 정보를 못 불러왔어요. 잠시 뒤 '오늘 낚시 고?'를 다시 눌러 주세요.", true);
+  } finally {
+    clearTimeout(timer);
+    btn.disabled = false;
+  }
+}
+
+// JSON에서 오늘(마지막 날짜)과 7일 전(첫 날짜) 값을 나눠 담는다.
+function parse(data) {
+  const h = data && data.hourly;
+  if (!h || !Array.isArray(h.time)) return null;
+  const t = h.time, sst = h.sea_surface_temperature, wh = h.wave_height, oc = h.ocean_current_velocity;
+  if (!sst || !wh || !oc) return null;
+
+  const todayStr = t[t.length - 1].slice(0, 10);
+  const firstStr = t[0].slice(0, 10);
+  const today = { hours: [], sst: [], wave: [], cur: [] };
+  const first = [];
+  t.forEach((ts, i) => {
+    const d = ts.slice(0, 10);
+    if (d === todayStr) {
+      today.hours.push(Number(ts.slice(11, 13)));
+      today.sst.push(sst[i]); today.wave.push(wh[i]); today.cur.push(oc[i]);
+    } else if (d === firstStr && sst[i] !== null) {
+      first.push(sst[i]);
+    }
+  });
+  const ok = (a) => a.length > 0 && a.every((v) => typeof v === "number");
+  if (!ok(today.sst) || !ok(today.wave) || !ok(today.cur)) return null;
+  return { today, firstAvg: first.length ? avg(first) : null, todayStr };
+}
+
+// ---------- 계산 ----------
+const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+const levelOf = (v, y, r) => (v >= r ? 2 : v >= y ? 1 : 0);
+
+function bestWindow(today) {
+  // 낮 시간(5~20시) 중 파도·해류가 가장 낮은 연속 3시간
+  const len = 3;
+  let best = null;
+  for (let i = 0; i + len <= today.hours.length; i++) {
+    if (today.hours[i] < 5 || today.hours[i + len - 1] > 20) continue;
+    let score = 0;
+    for (let k = i; k < i + len; k++) score += today.wave[k] / WAVE_RED + today.cur[k] / CUR_RED;
+    if (!best || score < best.score) best = { score, from: today.hours[i], to: today.hours[i + len - 1] + 1 };
+  }
+  return best;
+}
+
+// ---------- 그리기 ----------
+function render(m, spot) {
+  const d = m.today;
+  const maxWave = Math.max(...d.wave), maxCur = Math.max(...d.cur);
+  const lvl = Math.max(levelOf(maxWave, WAVE_YELLOW, WAVE_RED), levelOf(maxCur, CUR_YELLOW, CUR_RED));
+  const L = LEVELS[lvl];
+  const temp = avg(d.sst);
+
+  const light = $("light");
+  light.className = "light " + L.cls;
+  light.textContent = L.icon + " " + L.text;
+  $("nums").textContent = "파도 최대 " + maxWave.toFixed(1) + "m · 해류 최대 " +
+    maxCur.toFixed(1) + "km/h · 수온 " + temp.toFixed(1) + "°C";
+
+  const win = bestWindow(d);
+  $("chartWave").innerHTML = chart(d, d.wave, "var(--wave)", WAVE_YELLOW, WAVE_RED, win);
+  $("chartCur").innerHTML = chart(d, d.cur, "var(--cur)", CUR_YELLOW, CUR_RED, win);
+  $("rec").textContent = win
+    ? "✅ 추천 시간: " + pad(win.from) + "~" + pad(win.to) + "시 (파도·해류가 가장 약한 구간)"
+    : "추천 시간을 찾지 못했어요.";
+
+  if (m.firstAvg === null) {
+    $("trend").textContent = "수온 7일 변화: 데이터가 부족해요.";
+  } else {
+    const diff = temp - m.firstAvg;
+    const arrow = diff > 0.2 ? "↗" : diff < -0.2 ? "↘" : "→";
+    $("trend").textContent = "수온 7일 변화: " + arrow + " " + (diff > 0 ? "+" : "") + diff.toFixed(1) + "°C (7일 전 대비)";
+  }
+
+  const fish = FISH_TALK.find((f) => temp < f.max);
+  $("face").textContent = fish.face;
+  $("fishTalk").textContent = fish.text.replace("{t}", temp.toFixed(1));
+  $("careTalk").textContent = "⚠️ " + CARE_TALK[L.cls];
+  $("familyTalk").textContent = "👨‍👩‍👧 " + FAMILY_TALK[L.cls];
+
+  showStatus(spot.name + " · " + m.todayStr + " 예측 (참고용)");
+  $("result").hidden = false;
+}
+
+const pad = (n) => String(n).padStart(2, "0");
+
+// 간단한 SVG 선 그래프 (라이브러리 없음)
+function chart(d, vals, color, yThr, rThr, win) {
+  const W = 360, H = 130, L = 30, R = 8, T = 8, B = 20;
+  const maxY = Math.max(rThr * 1.2, Math.max(...vals) * 1.1);
+  const x = (i) => L + (i / (vals.length - 1)) * (W - L - R);
+  const y = (v) => T + (1 - v / maxY) * (H - T - B);
+  let s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="시간대별 그래프">';
+  // 추천 시간 구간
+  if (win) {
+    const i0 = d.hours.indexOf(win.from), i1 = Math.min(d.hours.indexOf(win.to), vals.length - 1);
+    const x0 = x(i0), x1 = i1 >= 0 ? x(i1) : x(vals.length - 1);
+    s += '<rect x="' + x0 + '" y="' + T + '" width="' + (x1 - x0) + '" height="' + (H - T - B) + '" fill="var(--rec)"/>';
+  }
+  // 기준선
+  [[yThr, "var(--yellow)"], [rThr, "var(--red)"]].forEach(([v, c]) => {
+    if (v <= maxY) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) +
+      '" stroke="' + c + '" stroke-dasharray="4 3" stroke-width="1"/>' +
+      '<text x="' + (L - 4) + '" y="' + (y(v) + 3) + '" font-size="9" text-anchor="end" fill="var(--sub)">' + v + "</text>";
+  });
+  // 가로축 시간
+  [0, 6, 12, 18, 23].forEach((hr) => {
+    const i = d.hours.indexOf(hr);
+    if (i >= 0) s += '<text x="' + x(i) + '" y="' + (H - 5) + '" font-size="9" text-anchor="middle" fill="var(--sub)">' + hr + "시</text>";
+  });
+  // 선
+  const pts = vals.map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
+  s += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round"/>';
+  // 지금 시각 표시
+  const nowH = new Date().getHours();
+  const ni = d.hours.indexOf(nowH);
+  if (ni >= 0) s += '<circle cx="' + x(ni) + '" cy="' + y(vals[ni]) + '" r="4" fill="' + color + '" stroke="var(--card)" stroke-width="2"/>';
+  return s + "</svg>";
+}
+
+function showStatus(text, isErr) {
+  const el = $("status");
+  el.textContent = text;
+  el.className = "msg" + (isErr ? " err" : "");
+}
+</script>
+</body>
+</html>
