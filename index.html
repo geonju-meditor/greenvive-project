@@ -58,6 +58,11 @@
   .fish span { color: var(--sub); font-size: .92rem; }
   .says { margin: 0 0 10px; font-weight: 700; }
   .care p { margin: 6px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .chip { background: var(--bg); border-radius: 999px; padding: 4px 12px; font-size: .92rem; }
+  .chip i { font-style: normal; color: var(--sub); font-size: .8rem; }
+  .chip.hot { background: #fde8d4; color: #7a3b00; }
+  @media (prefers-color-scheme: dark) { .chip.hot { background: #5a3416; color: #ffe2c4; } }
   .msg { color: var(--sub); margin: 0 0 12px; }
   .err { color: var(--red); }
   footer { color: var(--sub); font-size: .8rem; text-align: center; padding: 6px 0 20px; }
@@ -113,6 +118,13 @@
             <p id="careTalk"></p>
             <p id="familyTalk"></p>
           </div>
+        </div>
+
+        <div class="card" id="surveyCard" hidden>
+          <h2>🔎 이 바다에서 확인된 어종</h2>
+          <p id="surveyTitle" class="says"></p>
+          <div id="surveyList" class="chips"></div>
+          <p id="surveyNote" class="msg"></p>
         </div>
       </div>
     </section>
@@ -197,6 +209,27 @@ const FAMILY_TALK = {
   green:  "👨‍👩‍👧 가족은 그늘 있는 안전한 자리에서 간식 담당 😎",
   yellow: "👨‍👩‍👧 가족은 물가에서 떨어진 안쪽 자리에서 기다려요. 아이는 꼭 손잡기!",
   red:    "👨‍👩‍👧 가족과 함께라면 오늘은 육지 나들이로 바꿔요.",
+};
+
+// ---------- 조사 기록: 국가해양생태계종합조사 어류 API (해양수산부, 공공데이터포털) ----------
+// 왕돌초(울진 앞바다) 2022년 춘계 암반생태조사 31건을 어종별로 합친 값. tag는 API의 분포 구분(dsrbCn).
+const SURVEY = {
+  "울진": {
+    place: "왕돌초", period: "2022년 봄", stations: 2,
+    fish: [
+      { name: "자리돔", count: 2493, tag: "아열대" },
+      { name: "놀래기", count: 34, tag: "열대" },
+      { name: "돌돔", count: 7, tag: "온대" },
+      { name: "말쥐치", count: 7, tag: "열대" },
+      { name: "불볼락", count: 4, tag: "온대" },
+      { name: "무점황놀래기", count: 3, tag: "아열대" },
+      { name: "용치놀래기", count: 2, tag: "아열대" },
+      { name: "볼락", count: 2, tag: "아열대" },
+      { name: "도화볼락", count: 1, tag: "온대" },
+      { name: "방어", count: 1, tag: "아열대" },
+      { name: "혹돔", count: 1, tag: "아열대" },
+    ],
+  },
 };
 
 // ---------- 지도 ----------
@@ -394,9 +427,29 @@ function render(m, spot, idx) {
   $("careTalk").textContent = CARE_TALK[L.cls];
   $("familyTalk").textContent = FAMILY_TALK[L.cls];
 
+  renderSurvey(spot);
   showStatus(spot.name + " · " + m.todayStr + " 예측 (참고용: 어종은 일반적인 시즌 정보)");
   $("result").hidden = false;
   if (window.matchMedia("(max-width: 899px)").matches) $("status").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderSurvey(spot) {
+  const sv = SURVEY[spot.name], card = $("surveyCard");
+  card.hidden = !sv;
+  if (!sv) return;
+  const warm = sv.fish.filter((f) => f.tag === "열대" || f.tag === "아열대").length;
+  $("surveyTitle").textContent = sv.place + "에서 " + sv.fish.length + "종 확인! 그중 따뜻한 바다(열대·아열대) 어종이 " + warm + "종이야 🌴";
+  const box = $("surveyList");
+  box.textContent = "";
+  sv.fish.forEach((f) => {
+    const c = document.createElement("span");
+    c.className = "chip" + (f.tag === "열대" || f.tag === "아열대" ? " hot" : "");
+    c.textContent = f.name + " ";
+    const i = document.createElement("i"); i.textContent = f.tag + " · " + f.count + "마리";
+    c.appendChild(i); box.appendChild(c);
+  });
+  $("surveyNote").textContent = "출처: 국가해양생태계종합조사(해양수산부) · " + sv.period + " 조사 " + sv.stations +
+    "개 지점의 기록이에요. 오늘 조황이 아니니 참고만 해요.";
 }
 
 // 간단한 SVG 선 그래프 (라이브러리 없음)
